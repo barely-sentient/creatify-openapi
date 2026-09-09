@@ -95,11 +95,32 @@ async function main(): Promise<void> {
     console.log("Skipping prefabs. (Re-run and answer yes to install openapi-blocks prefabs.)");
   }
 
+  const reactApps: string[] = [];
+  if (!args.yes && await confirm("Would you like to set up a React app here too?", false)) {
+    while (true) {
+      const appName = (await ask("Enter the app name: ")).trim();
+      if (!/^[A-Za-z0-9_-]+$/.test(appName)) {
+        console.log("App names may only contain letters, numbers, underscores, and hyphens.");
+        continue;
+      }
+      if (appName.toLowerCase() === "shared") {
+        console.log('"shared" is reserved for shared frontend code.');
+        continue;
+      }
+      if (reactApps.some((name) => name.toLowerCase() === appName.toLowerCase())) {
+        console.log("That app name has already been added.");
+        continue;
+      }
+      reactApps.push(appName);
+      if (!await confirm("Do you want to add any more?", false)) break;
+    }
+  }
+
   // Ensure there is always a root: openapi.json is king.
   await ensureBaseRoot(openapiDir, name, port);
 
   // Step 3: scaffold the server project (tsify/eventify/autocrudify/persistify/permissify wiring).
-  await scaffoldStep(targetDir, openapiDir, name, port, args.force);
+  await scaffoldStep(targetDir, openapiDir, name, port, args.force, reactApps);
 
   // Step 4: install + initial codegen.
   if (!args.noInstall) {

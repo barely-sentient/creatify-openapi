@@ -10,6 +10,7 @@ import {
   genJectShared,
   genLaxPermissions,
   genProjectReadme,
+  genReactApp,
   genSchemaShared,
   genSrcIndex,
   genTsconfig,
@@ -62,7 +63,8 @@ export async function scaffoldStep(
   openapiDir: string,
   projectName: string,
   port: number,
-  force: boolean
+  force: boolean,
+  reactApps: string[] = []
 ): Promise<void> {
   const write = async (rel: string, content: string, opts?: { overwrite?: boolean }) => {
     const full = path.join(targetDir, rel);
@@ -77,6 +79,10 @@ export async function scaffoldStep(
   console.log("Scaffolding server project ...");
   await write("package.json", genPackageJson(projectName));
   await write("tsconfig.json", genTsconfig());
+  await fs.mkdir(path.join(targetDir, "web", "shared"), { recursive: true });
+  for (const appName of reactApps) {
+    await write(`web/${appName}/index.tsx`, genReactApp(appName));
+  }
   await write(".gitignore", genGitignore());
   await write("README.md", genProjectReadme(projectName, port));
   await write("src/index.ts", genSrcIndex(port));

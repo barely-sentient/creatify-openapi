@@ -19,6 +19,8 @@ export function genPackageJson(name: string): string {
         "json-ject": "^1.0.7",
         "permissify-openapi": "^1.0.0",
         "persistify-openapi": "^1.0.0",
+        react: "^19.1.1",
+        "react-dom": "^19.1.1",
         "serveify-openapi": "^1.0.23",
         sqlite3: "^6.0.1",
         "tsify-openapi": "^1.0.2",
@@ -27,6 +29,8 @@ export function genPackageJson(name: string): string {
       devDependencies: {
         "@types/express": "^4.17.21",
         "@types/node": "^22.7.0",
+        "@types/react": "^19.1.10",
+        "@types/react-dom": "^19.1.7",
         "@types/sqlite3": "^3.1.11",
         typescript: "^5.6.0",
       },

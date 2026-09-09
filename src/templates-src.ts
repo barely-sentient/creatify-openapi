@@ -10,10 +10,12 @@ export function genTsconfig(): string {
         strict: true,
         esModuleInterop: true,
         skipLibCheck: true,
+        jsx: "react-jsx",
         baseUrl: ".",
         paths: {
           "@api/*": ["src/generated/*"],
           "@api": ["src/generated/index.ts"],
+          "@shared/*": ["./web/shared/"],
         },
         ignoreDeprecations: "6.0",
       },
@@ -58,6 +60,25 @@ await createHttpServer({
     };
   },
 });
+`;
+}
+
+export function genReactApp(name: string): string {
+  return `import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+
+function App() {
+  return <h1>${name}</h1>;
+}
+
+const rootElement = document.getElementById("root");
+if (!rootElement) throw new Error("Missing root element");
+
+createRoot(rootElement).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
 `;
 }
 
