@@ -81,8 +81,8 @@ export async function scaffoldStep(
   await write("tsconfig.json", genTsconfig());
   await fs.mkdir(path.join(targetDir, "web", "shared"), { recursive: true });
   for (const appName of reactApps) {
-    await fs.mkdir(`web/${appName}/src`)
-    await fs.mkdir(`web/${appName}/static`)
+    await fs.mkdir(`web/${appName}/src`, { recursive: true });
+    await fs.mkdir(`web/${appName}/static`, { recursive: true });
     await write(`web/${appName}/src/index.tsx`, genReactApp(appName));
   }
   await write(".gitignore", genGitignore());

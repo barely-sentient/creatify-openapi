@@ -1,6 +1,6 @@
 {
   "name": "creatify-openapi",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Generate a serveify-openapi server project from an openapi.json (json-ject) spec: migratify DB import, openapi-blocks prefabs, tsify types, eventify events, autocrudify + persistify + permissify wiring",
   "keywords": [
     "creatify",
