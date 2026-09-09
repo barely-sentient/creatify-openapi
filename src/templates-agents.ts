@@ -18,29 +18,114 @@ single API description file:
 - \`src/*\` — **server side.** The API. You may add files here (handlers,
   permissions, events, adapters) but NEVER hand-edit \`src/generated/\`.
 - \`web/*\` — **applications (UIs).** This is where websites and apps live. The
-  backend team (this project) serves JSON; each folder under \`web/\` is an
-  independent frontend that talks to it over HTTP.
+  backend serves JSON; each folder under \`web/\` is a separate UI/application
+  consuming the same project API.
+
+### IMPORTANT: web/* applications are NOT separate Node projects
+
+A project may have multiple applications:
+
+\`\`\`text
+web/
+  frontend/
+  admin/
+  customer/
+  b2b/
+\`\`\`
+
+These are all part of the **same root project**.
+
+Do NOT create a \`package.json\`, \`node_modules\`, or independently managed
+Node project inside every \`web/<app>\` directory unless the user explicitly
+asks for that architecture.
+
+UIs should share the root project's:
+
+- dependencies
+- TypeScript configuration
+- build tooling
+- framework dependencies
+- generated API clients
+- generated API types
+- generated schemas
+- validation infrastructure
+
+This is intentional. A customer area, frontend, admin area and B2B area will
+often use the same framework and tooling.
+
+Suggested structure:
 
 \`\`\`text
 my-api/
-  openapi/openapi.json     <- boss file: edit this, run npm run codegen
+  package.json
+  tsconfig.json
+
+  openapi/
+    openapi.json
+
   src/
-    index.ts               <- server boot (don't reorder plugins)
-    generated/             <- AUTO-GENERATED types, API clients, events (do not edit)
-    handlers/              <- custom endpoints (*.handler.ts, auto-loaded)
-    permissions/           <- access rules (*.permissions.ts, auto-loaded)
-    plugins/               <- codegen + validation wiring
-    setup/                 <- db adapter + shared config
+    index.ts
+    generated/
+    handlers/
+    permissions/
+    plugins/
+    setup/
+
   web/
-    frontend/              <- example UI #1 (React, plain JS, whatever - your call)
-      static/              <- served files: app.js, app.css (built output + assets)
-      src/                 <- UI source: index.tsx, components, styles
-    admin/                 <- example UI #2 (optional second app, same API)
-  scripts/codegen.ts       <- rebuilds src/generated from the spec
+    frontend/
+      src/
+        index.tsx
+        components/
+        styles/
+
+    admin/
+      src/
+        index.tsx
+        components/
+        styles/
+
+    customer/
+      src/
+        index.tsx
+        components/
+        styles/
+
+  scripts/codegen.ts
 \`\`\`
 
+The UI applications can have independent entry points, components, layouts
+and visual designs while still sharing the root project's dependency and
+tooling setup.
+
+### API generation ownership
+
+**\`tsify-openapi\` owns API generation.**
+
+It generates the TypeScript API surface from the OpenAPI specification,
+including:
+
+- entity types
+- entity schemas
+- API request functions
+- validation infrastructure
+- generated exports
+
+The generated API functions are already suitable for browser use.
+
+**DO NOT generate another API client.**
+
+**DO NOT recreate generated API functions with \`fetch\`, Axios, or another
+HTTP library when a generated function already exists.**
+
+**DO NOT create duplicate entity interfaces or OpenAPI schemas in the UI.**
+
+When a UI needs API functionality, reuse what \`tsify-openapi\` generated.
+
+The UI is responsible for **rendering and user interaction**, not for
+reimplementing the API layer.
+
 Golden workflow: **edit spec → \`npm run codegen\` → write logic → \`npm start\`
-→ test with curl → build UI against the live API.**
+→ test with curl → build UI using the generated API clients and validation.**
 
 ## 2. How to run a session with the user
 
@@ -61,6 +146,7 @@ cover 1, 2 and 6:
    admin-only delete?). Scaffold ships allow-all DEV rules — you MUST replace
    them with real ones before calling anything done.
 6. **The UI?** How many apps under \`web/\`, and each one's stack (see §8).
+   UIs are part of the root project and are NOT separate Node packages.
    Default suggestion: one React app bundled with esbuild + sass; tailwind or
    plain CSS if they prefer. Never force a stack — ask.
 
@@ -81,6 +167,11 @@ HTTP request
   → 200 + JSON  (or status_code from any thrown error — see §7 gotchas)
 \`\`\`
 
+Client-side validation uses the same generated OpenAPI validation information.
+
+Every UI must enable AJV and use the project's shared validation infrastructure.
+Do not create a second validation system for the browser.
+
 ## 4. The modules and how they fit together
 
 - **serveify-openapi** — HTTP server. Reads the spec, registers one Express
@@ -92,38 +183,59 @@ HTTP request
   \`usePermissify\` (auto-loads \`src/**/*.permissions.ts\`).
   IMPORTANT: plugin order in \`src/index.ts\` is load-bearing —
   \`useAutoCrud\` FIRST, custom loaders after (last registered wins conflicts).
+
 - **autocrudify-openapi** — \`useAutoCrud({ adapter })\`. Creates one table per
   entity, wires the 6 conventional routes
   (\`GET|POST /things\`, \`GET|PUT|PATCH|DELETE /things/{id}\`). Returns raw
   rows/arrays (\`POST\` → created row WITH id, \`DELETE\` → \`{success:true}\`,
   missing → 404). Nested routes (\`/users/{id}/orders\`) are NOT auto-wired —
   write handlers for those.
+
 - **persistify-openapi** — \`repository.configure({adapter})\`,
   \`setupRepository(schema)\`, repo methods
   (\`create/getOne/getMany/updateOne/deleteOne\`). Runs the
   validate→permissions→Before→save→After pipeline on every write. Throws
   \`ValidationFailedError\` (400) and \`PermissionDeniedError\` (403) — both
   carry \`status_code\`, which serveify turns into the HTTP status.
+
 - **permissify-openapi** — rules bound to the SAME schemas tsify generates:
   \`permissions(of<User>(UserSchema).Update, all(isAuth, isSelf,
   fields.only(['email'])))\`, checked via \`checkCapabilities\`.
   Combinators: \`all/any/not\`; field filters: \`fields.all/only/allExcept\`.
   Context \`{actionPerformedBy:'system'}\` bypasses everything (background jobs).
-- **tsify-openapi** — spec → \`src/generated/<entity>.ts\` (Type, Schema,
-  fetch Api) + \`validation.ts\` + \`index.ts\`; patches tsconfig \`@api/*\`
-  paths. Re-runs on every boot AND via \`npm run codegen\`.
+
+- **tsify-openapi** — **THE API CLIENT, TYPE AND SCHEMA GENERATOR.**
+
+  Spec → \`src/generated/<entity>.ts\` (Type, Schema, API functions) +
+  \`validation.ts\` + \`index.ts\`; patches tsconfig \`@api/*\` paths.
+  Re-runs on every boot AND via \`npm run codegen\`.
+
+  **This is the single source of truth for the TypeScript API surface.**
+
+  Both server and browser code should reuse its generated output.
+
+  If the UI needs to call an existing endpoint, import and call the generated
+  API function from \`@api/*\`.
+
+  If the UI needs an endpoint that does not exist, update the OpenAPI
+  specification and regenerate. Do NOT work around the missing endpoint by
+  implementing ad-hoc API logic in the browser.
+
 - **eventify-openapi** — spec → \`src/generated/<entity>.events.ts\` +
   \`index.events.ts\`: 6 hooks per entity
   (\`BeforeCreate/AfterCreate/BeforeUpdate/AfterUpdate/BeforeDelete/AfterDelete\`).
   Listeners run in order, each one's return becomes the next one's input;
   returning \`undefined\` keeps the payload. Put domain logic here, never in
   generated files (use separate files importing \`{ Events }\`).
+
 - **json-ject** — the spec is modular: \`@require\` arrays merge files
   left-to-right (dependencies first). Paths in \`@require\` are relative to the
   PROJECT ROOT (where you run \`npm start\`), not to the file containing them.
+
 - **migratify-openapi** — one-shot DB importer (MySQL/Postgres/MongoDB) that
   writes \`openapi.json\` + \`entities/\` + \`paths/\`. Run via the creatify
   interview, not by hand.
+
 - **openapi-blocks** — prefab entities+routes installed under
   \`openapi/blocks/<name>/\` and referenced from the root. Check
   \`block.json → requires\` when combining blocks.
@@ -135,6 +247,9 @@ to \`components.schemas\` (inline or a new file under \`openapi/\` wired via
 \`@require\`), add flat routes \`GET|POST /slugs\` +
 \`GET|PUT|PATCH|DELETE /slugs/{id}\` mirroring an existing block's
 \`routes.json\`, run codegen, add lax→real permissions, curl-test.
+
+The generated TypeScript type, schema and API functions are then available to
+both server and browser code.
 
 **Add a field:** edit the entity schema, codegen, the table column is added
 automatically (existing data untouched), update permissions \`fields.*\` if
@@ -160,61 +275,381 @@ returns 403.
 
 ## 6. Consuming the API from a UI
 
-- Reuse the generated clients: tsify's \`<Entity>Api\` are plain \`fetch\`
-  wrappers — importable in browser code too.
-- Base URLs come from \`servers[0].url\` in the spec (default
-  \`http://localhost:<port>\`). For browser apps, either call the absolute API
-  URL or (recommended for local dev) proxy \`/api\` → the API port to avoid CORS
-  (serveify does not set CORS headers).
-- Response shapes: single-resource routes return the row object; list routes
-  return a raw array; delete returns \`{success:true}\`; errors are
-  \`{status:"failed", message}\` (+ \`errors\` detail on 400s). Block specs may
-  declare envelope shapes (\`{data, total}\`) — the server currently returns raw
-  rows and logs drift warnings; write a \`.handler.ts\` wrapper if the UI wants
-  the envelope.
+### The UI does not own the API layer
+
+A UI should:
+
+1. import the generated API function from \`@api/*\`
+2. call it
+3. receive typed data
+4. render the result
+5. manage local UI state
+6. display loading/error/empty states
+7. collect user input
+8. use the generated validation infrastructure
+
+The UI should NOT:
+
+- regenerate API clients
+- create duplicate entity types
+- duplicate OpenAPI schemas
+- recreate generated request functions
+- manually construct HTTP requests when a generated API function exists
+- contain database logic
+- contain persistence logic
+- contain server-side permissions
+- contain server-side business rules
+- contain domain event processing
+- introduce a separate validation schema for an existing OpenAPI model
+- create an \`api.ts\` abstraction merely to wrap generated API clients
+
+The OpenAPI specification and \`tsify-openapi\` are the source of truth.
+
+### Generated API clients
+
+\`tsify-openapi\` generates plain browser-compatible API functions.
+
+**Reuse these directly.**
+
+Import the generated API surface from \`@api/*\` and call those functions from
+the UI.
+
+Conceptually:
+
+\`\`\`text
+OpenAPI specification
+        │
+        ▼
+  tsify-openapi
+        │
+        ├── Types
+        ├── Schemas
+        ├── API functions
+        └── Validation
+                │
+                ▼
+             web/*
+                │
+                ▼
+          UI rendering
+\`\`\`
+
+If the UI needs functionality that is not represented by a generated API
+function, the correct solution is normally:
+
+1. update the OpenAPI contract
+2. run codegen
+3. implement the backend capability
+4. verify the endpoint
+5. consume the newly generated API function from the UI
+
+Do not solve missing backend capabilities by implementing an ad-hoc HTTP
+request directly in the UI.
+
+### Client-side AJV
+
+**Every UI must enable AJV in its \`index.tsx\` entry point.**
+
+The backend already uses AJV. The UI must use the same generated validation
+infrastructure so validation occurs consistently on both sides of the API
+boundary.
+
+Do not introduce another validation library when AJV and the project's
+generated validation infrastructure already provide the required behaviour.
+
+### \`useValidator\`
+
+Use \`useValidator\` for client-side validation.
+
+\`useValidator\` applies the generated OpenAPI validation contract and is
+designed to work across client and server code.
+
+This means validation follows the same source of truth:
+
+\`\`\`text
+              OpenAPI schema
+                    │
+                    ▼
+              tsify-openapi
+                    │
+             generated schema
+                    │
+          ┌─────────┴─────────┐
+          ▼                   ▼
+      Server AJV           Client AJV
+          │                   │
+          ▼                   ▼
+    API validation        UI validation
+\`\`\`
+
+Do not manually duplicate the same validation rules in React components or
+create parallel schemas for entities already represented by the OpenAPI
+contract.
+
+### Multiple UIs
+
+Multiple UIs can consume the same generated API:
+
+\`\`\`text
+                    OpenAPI
+                       │
+                       ▼
+                 tsify-openapi
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+      frontend       admin       customer
+          │            │            │
+          └────────────┼────────────┘
+                       ▼
+                     API
+\`\`\`
+
+For example:
+
+\`\`\`text
+web/
+  frontend/
+    src/
+      index.tsx
+      components/
+
+  admin/
+    src/
+      index.tsx
+      components/
+
+  customer/
+    src/
+      index.tsx
+      components/
+\`\`\`
+
+These applications may have different layouts, routes and components, but
+they share the root project's dependencies, tooling, generated API surface and
+validation infrastructure.
+
+### UI build tooling
+
+**Default recommendation: React + esbuild + sass.**
+
+This is a recommendation, not a requirement.
+
+The user may choose React, Vue, plain JavaScript, Tailwind, plain CSS or
+another framework/tooling approach.
+
+Whatever stack is selected, integrate it with the root project.
+
+Do NOT create an independent package for each UI merely because there are
+multiple UI areas.
+
+### API base URL
+
+Base URLs come from \`servers[0].url\` in the spec (default
+\`http://localhost:<port>\`). For browser applications, either call the
+absolute API URL or (recommended for local dev) proxy \`/api\` → the API port
+to avoid CORS (serveify does not set CORS headers).
+
+### Response shapes
+
+Single-resource routes return the row object.
+
+List routes return a raw array.
+
+Delete returns \`{success:true}\`.
+
+Errors are \`{status:"failed", message}\` (+ \`errors\` detail on 400s).
+
+Block specs may declare envelope shapes (\`{data, total}\`) — the server
+currently returns raw rows and logs drift warnings; write a \`.handler.ts\`
+wrapper if the UI genuinely needs the envelope.
+
+The UI should consume the verified API response shape rather than inventing or
+assuming a different one.
 
 ## 7. Gotchas (learn from our scars)
 
 1. \`src/generated/\` is overwritten on EVERY boot and codegen. Your code lives
    in \`handlers/\`, \`permissions/\`, \`*.events.ts\` (own files), \`setup/\`.
+
 2. HTTP status comes from \`status_code\` on thrown errors — plain \`status\`
    is IGNORED. A throw with no \`status_code\` returns 200 with a failed body.
+
 3. \`lax.permissions.ts\` is DEV-ONLY allow-all. Ship it to prod and everyone
    can do everything.
+
 4. Empty spec (no entities): codegen/tsify emit only index+validation, eventify
    skips with a notice. Totally fine — add entities later.
+
 5. JECT: \`@require\` paths resolve from project root; arrays merge
    left-to-right; a node holding \`@require\` drops sibling keys (never mix
    literal paths and \`@require\` at the same level).
+
 6. Entity detection needs \`x-entity\` (or \`title\`/\`x-table\`); file names in
    \`@api/\` are the lowercased schema keys (\`User\` → \`@api/user\`).
+
 7. \`src/index.ts\` plugin order matters: \`useAutoCrud\` first, custom handler
    loaders after.
 
+8. **\`web/*\` is not a collection of independent Node packages.** Do not add
+   per-UI \`package.json\` files or dependency trees unless explicitly
+   requested.
+
+9. **\`tsify-openapi\` already generates the API clients.** Do not regenerate,
+   duplicate or unnecessarily wrap them.
+
+10. **AJV must be enabled in every UI entry point.** Use the project's existing
+    generated validation infrastructure and \`useValidator\`.
+
+11. **UI code is presentation/application code, not backend code.** Business
+    logic, persistence, permissions and domain events belong on the server.
+
 ## 8. Frontend guidance (no vendor lock-in)
 
-Multiple UIs can bolt onto one API — that's the point of \`web/\`. Each app is
-independent: own deps, own build, own deploy. Suggested layout per app:
+Multiple UIs can bolt onto one API — that's the point of \`web/\`.
+
+However, each UI is **not an independent Node package**.
+
+The correct mental model is:
+
+\`\`\`text
+Root project
+│
+├── package.json
+├── tsconfig.json
+├── node_modules/
+├── src/
+│   └── generated/
+│
+└── web/
+    ├── frontend/
+    ├── admin/
+    ├── customer/
+    └── b2b/
+\`\`\`
+
+All UI applications use the root project's dependencies and configuration.
+
+### Suggested layout
 
 \`\`\`text
 web/<app>/
-  package.json        # own deps + scripts (build/dev)
-  src/                # source: index.tsx, components/, styles/
-  static/             # built output + assets: app.js, app.css, index.html
+
+  src/
+    index.tsx
+    components/
+    styles/
+
+  static/
+    index.html
+    app.js
+    app.css
 \`\`\`
 
-- **Default recommendation (not a requirement): React + esbuild + sass.**
-  esbuild is one tiny dependency that bundles TSX and compiles sass-capable
-  CSS fast: \`esbuild src/index.tsx --bundle --outfile=static/app.js\`.
-  Recommend it; accept tailwind, plain CSS/JS, Vue, or anything else the user
-  prefers — adapt the scaffold to THEIR choice.
-- Keep API calls in one place per app (e.g. \`src/api.ts\` wrapping tsify's
-  generated clients or plain fetch against the endpoint table).
-- Dev loop: run API (\`npm start\` at root) + UI dev/build in \`web/<app>\`;
-  proxy API calls to avoid CORS (see §6).
-- Never put UI code in \`src/\` and never server code in \`web/\`. If the user
-  asks for server-rendered pages, that's a custom handler serving HTML — say so
-  explicitly rather than blurring the boundary.
+Do NOT add:
+
+\`\`\`text
+web/frontend/package.json
+web/admin/package.json
+web/customer/package.json
+\`\`\`
+
+unless the user explicitly asks for separate package boundaries.
+
+### UI responsibilities
+
+UI code is responsible for:
+
+- rendering
+- layout
+- styling
+- user interaction
+- local UI state
+- loading/error/empty states
+- form presentation
+- calling generated API functions
+- displaying validation errors
+
+UI code is NOT responsible for:
+
+- implementing API clients
+- duplicating OpenAPI types
+- duplicating OpenAPI schemas
+- persistence
+- database access
+- server-side permissions
+- server-side business rules
+- domain event processing
+- recreating generated validation infrastructure
+
+### API responsibility
+
+The API contract lives in:
+
+\`\`\`text
+openapi/openapi.json
+\`\`\`
+
+The generated API surface comes from:
+
+\`\`\`text
+tsify-openapi
+\`\`\`
+
+If a UI needs an API capability that does not exist:
+
+**do not implement a workaround in the UI.**
+
+Instead:
+
+1. update the OpenAPI specification
+2. run codegen
+3. implement any required backend logic
+4. verify the endpoint
+5. consume the newly generated API function from the UI
+
+### Validation responsibility
+
+Validation derives from the OpenAPI contract.
+
+Every UI entry point must enable AJV in \`index.tsx\` and use \`useValidator\`
+for client-side validation.
+
+The backend performs the corresponding server-side validation.
+
+The result is:
+
+\`\`\`text
+                  OpenAPI
+                     │
+                     ▼
+               tsify-openapi
+                     │
+            ┌────────┴────────┐
+            │                 │
+         Server             Browser
+            │                 │
+          AJV               AJV
+            │                 │
+            └───────┬─────────┘
+                    ▼
+             same contract
+\`\`\`
+
+### Development loop
+
+Run the API from the project root:
+
+\`\`\`bash
+npm start
+\`\`\`
+
+Then run/build the desired UI using the root project's tooling.
+
+Proxy API calls to avoid CORS where appropriate.
+
+Because all UIs share the root project, do not introduce another package
+installation or dependency tree merely because a second UI is being added.
 
 ## 9. Definition of done (check before handing over)
 
@@ -223,11 +658,24 @@ web/<app>/
 - [ ] \`npm start\` boots with no errors; startup logs list wired CRUD routes.
 - [ ] Curl-proven: list (200, array), create (200, row WITH id), read one,
       update, delete, read-after-delete (404), invalid body (400), no-permission
-      call (403 — after replacing lax rules with real ones for at least one check).
+      call (403 — after replacing lax rules with real ones for at least one
+      check).
 - [ ] \`lax.permissions.ts\` replaced or tightened — never ship allow-all
       silently. Say so out loud in your summary.
-- [ ] Every \`web/<app>\` builds (\`static/app.js\` + CSS exist) and talks to
-      the verified endpoints (no hardcoded mock data left in).
+- [ ] Every \`web/<app>\` builds successfully.
+- [ ] Every UI consumes the generated \`tsify-openapi\` API functions.
+- [ ] No duplicate API client, API wrapper or generated TypeScript API layer
+      has been created unnecessarily.
+- [ ] No unnecessary \`package.json\` or independent Node project has been
+      created inside \`web/*\`.
+- [ ] Every UI entry point enables AJV.
+- [ ] Every UI uses \`useValidator\` / generated validation infrastructure
+      where validation is required.
+- [ ] No duplicate OpenAPI entity types or validation schemas have been
+      introduced into the UI.
+- [ ] UIs talk to the verified endpoints; no hardcoded mock API data is left
+      in the finished application.
+- [ ] No server/business logic has leaked into UI components.
 - [ ] Summarize for the user: what was built, exact commands to run it, what
       you left as TODO (permissions? adapter swap? envelope wrappers?).
 `;
