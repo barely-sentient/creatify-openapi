@@ -28,8 +28,6 @@ export function genSrcIndex(port: number): string {
 import { useAutoCrud } from "autocrudify-openapi";
 import type { RequestSessionCtx } from "./context.js";
 import { useAjv } from "./plugins/use-ajv.js";
-import { useTsify } from "./plugins/use-tsify.js";
-import { runEventify } from "./plugins/run-eventify.js";
 import { SQLiteAdapter } from "./setup/adapters/sqlite/index.js";
 import { jectConfig } from "./setup/conf/ject.shared.js";
 
@@ -45,8 +43,8 @@ await createHttpServer({
     // Custom handlers registered later win on conflicts (last write wins).
     useAutoCrud({ adapter: new SQLiteAdapter() }),
     useCustomHandlers,
-    useEventify(),
-    usePermissify,
+    useEventify('openapi/openapi.json'),
+    usePermissify(),
     useAjv,
   ],
   async buildContext(): Promise<RequestSessionCtx> {
