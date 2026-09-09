@@ -43,6 +43,7 @@ await createHttpServer({
     // Custom handlers registered later win on conflicts (last write wins).
     useAutoCrud({ adapter: new SQLiteAdapter() }),
     useCustomHandlers,
+    useTsify('openapi/openapi.json', jectConfig),
     useEventify('openapi/openapi.json'),
     usePermissify(),
     useAjv,

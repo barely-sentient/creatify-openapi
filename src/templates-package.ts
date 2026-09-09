@@ -19,7 +19,7 @@ export function genPackageJson(name: string): string {
         "json-ject": "^1.0.7",
         "permissify-openapi": "^1.0.0",
         "persistify-openapi": "^1.0.0",
-        "serveify-openapi": "^1.0.22",
+        "serveify-openapi": "^1.0.23",
         sqlite3: "^6.0.1",
         "tsify-openapi": "^1.0.2",
         tsx: "^4.23.0",
