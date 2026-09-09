@@ -45,9 +45,7 @@ await createHttpServer({
     // Custom handlers registered later win on conflicts (last write wins).
     useAutoCrud({ adapter: new SQLiteAdapter() }),
     useCustomHandlers,
-    useTsify(jectConfig),
-    runEventify(jectConfig),
-    useEventify,
+    useEventify(),
     usePermissify,
     useAjv,
   ],
@@ -72,55 +70,6 @@ export type RequestSessionCtx = PermissionContext & {
   role: string;
   locale: string;
 };
-`;
-}
-
-export function genUseTsify(): string {
-  return `import type { JectOptions } from "json-ject";
-import type { ServerPlugin } from "serveify-openapi";
-import { openApiSchema } from "../setup/conf/schema.shared.js";
-import { tsifyOpenApi } from "tsify-openapi";
-
-// Regenerates @api/* types + fetch APIs from openapi.json before routing.
-export const useTsify = (config: JectOptions): ServerPlugin => ({
-  async beforeRouting() {
-    await tsifyOpenApi({
-      jectCfg: config,
-      input: openApiSchema,
-      type: "file",
-      outDir: "src/generated",
-      tsconfigPath: "tsconfig.json",
-    });
-  },
-});
-`;
-}
-
-export function genRunEventify(): string {
-  return `import { eventifyOpenApi } from "eventify-openapi";
-import type { JectOptions } from "json-ject";
-import type { ServerPlugin } from "serveify-openapi";
-import { openApiSchema } from "../setup/conf/schema.shared.js";
-
-// Regenerates the typed domain event catalog from openapi.json (runs after tsify).
-export const runEventify = (jectCfg: JectOptions): ServerPlugin => ({
-  async beforeRouting() {
-    try {
-      await eventifyOpenApi({
-        jectCfg,
-        input: openApiSchema,
-        type: "file",
-        contextType: { name: "RequestSessionCtx", from: "../context.js" },
-      });
-    } catch (err) {
-      if ((err as Error).message?.includes("No schemas found")) {
-        console.log("eventify: no schemas in spec yet - skipping event catalog.");
-        return;
-      }
-      throw err;
-    }
-  },
-});
 `;
 }
 

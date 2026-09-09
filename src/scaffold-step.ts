@@ -10,12 +10,10 @@ import {
   genJectShared,
   genLaxPermissions,
   genProjectReadme,
-  genRunEventify,
   genSchemaShared,
   genSrcIndex,
   genTsconfig,
   genUseAjv,
-  genUseTsify,
 } from "./templates-src.js";
 import { genSqliteAdapter } from "./templates-sqlite.js";
 import { genAgentGuide } from "./templates-agents.js";
@@ -83,8 +81,6 @@ export async function scaffoldStep(
   await write("README.md", genProjectReadme(projectName, port));
   await write("src/index.ts", genSrcIndex(port));
   await write("src/context.ts", genContext());
-  await write("src/plugins/use-tsify.ts", genUseTsify());
-  await write("src/plugins/run-eventify.ts", genRunEventify());
   await write("src/plugins/use-ajv.ts", genUseAjv());
   await write("src/setup/conf/ject.shared.ts", genJectShared());
   await write("src/setup/conf/schema.shared.ts", genSchemaShared());
@@ -104,7 +100,7 @@ export async function scaffoldStep(
   let hasHandler = false;
   try {
     const files = await fs.readdir(handlersDir);
-    hasHandler = files.some((f) => f.endsWith(".handler.ts"));
+    hasHandler = files.some((f: string) => f.endsWith(".handler.ts"));
   } catch {
     // no handlers dir yet
   }
