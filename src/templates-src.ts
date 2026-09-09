@@ -49,7 +49,7 @@ await createHttpServer({
     useEventify('openapi/openapi.json'),
     usePermissify(),
     useAjv,
-    ${reactApps.map((appName) => `useWebApp("/${appName}", "./web/${appName}/static")`).join(",\n    ")}
+    ${reactApps.map((appName) => `useWebApp("/${appName}", "${appName}")`).join(",\n    ")}
   ],
   async buildContext(): Promise<RequestSessionCtx> {
     // TODO: derive this from the request (auth header, session, ...).
