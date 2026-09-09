@@ -22,7 +22,7 @@ export function genPackageJson(name: string, reactApps: string[] = []): string {
       dependencies: {
         ajv: "^8.20.0",
         "autocrudify-openapi": "^1.0.1",
-        esbuild: "^0.25.0",
+        esbuild: "^0.27.3",
         "esbuild-sass-plugin": "^3.3.1",
         "eventify-openapi": "^1.0.3",
         express: "^4.19.2",
