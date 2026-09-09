@@ -1,7 +1,14 @@
 /** File contents for the generated server project. All templates are embedded
  * so the published npx package works from dist/ alone. */
 
-export function genPackageJson(name: string): string {
+export function genPackageJson(name: string, reactApps: string[] = []): string {
+  const appScripts = Object.fromEntries(
+    reactApps.flatMap((appName) => [
+      [`${appName}:build`, `node scripts/esbuild.js ${appName}`],
+      [`${appName}:watch`, `node scripts/esbuild.js ${appName} --watch`],
+    ])
+  );
+
   return JSON.stringify(
     {
       name,
@@ -10,10 +17,13 @@ export function genPackageJson(name: string): string {
       scripts: {
         start: "npx tsx src/index.ts",
         codegen: "npx tsx scripts/codegen.ts",
+        ...appScripts,
       },
       dependencies: {
         ajv: "^8.20.0",
         "autocrudify-openapi": "^1.0.1",
+        esbuild: "^0.25.0",
+        "esbuild-sass-plugin": "^3.3.1",
         "eventify-openapi": "^1.0.3",
         express: "^4.19.2",
         "json-ject": "^1.0.7",
@@ -21,6 +31,7 @@ export function genPackageJson(name: string): string {
         "persistify-openapi": "^1.0.0",
         react: "^19.1.1",
         "react-dom": "^19.1.1",
+        sass: "^1.86.0",
         "serveify-openapi": "^1.0.24",
         sqlite3: "^6.0.1",
         "tsify-openapi": "^1.0.2",

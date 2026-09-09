@@ -116,11 +116,17 @@ async function main(): Promise<void> {
     }
   }
 
+  const buildOptions = { minify: false, sourcemap: true };
+  if (reactApps.length > 0 && !args.yes) {
+    buildOptions.minify = await confirm("Minify frontend assets for the initial build?", false);
+    buildOptions.sourcemap = await confirm("Generate frontend source maps?", true);
+  }
+
   // Ensure there is always a root: openapi.json is king.
   await ensureBaseRoot(openapiDir, name, port);
 
   // Step 3: scaffold the server project (tsify/eventify/autocrudify/persistify/permissify wiring).
-  await scaffoldStep(targetDir, openapiDir, name, port, args.force, reactApps);
+  await scaffoldStep(targetDir, openapiDir, name, port, args.force, reactApps, buildOptions);
 
   // Step 4: install + initial codegen.
   if (!args.noInstall) {
@@ -136,6 +142,20 @@ async function main(): Promise<void> {
       console.log("npm install failed. Run it manually, then run npm run codegen.");
       printNext(targetDir, port, false);
       return;
+    }
+
+    for (const appName of reactApps) {
+      console.log(`Building ${appName} frontend ...`);
+      const built = spawnSync(npmCmd, ["run", `${appName}:build`], {
+        cwd: targetDir,
+        stdio: "inherit",
+        shell: true,
+      });
+      if (built.status !== 0) {
+        console.log(`Frontend build failed for ${appName}. Run npm run ${appName}:build manually.`);
+        printNext(targetDir, port, false);
+        return;
+      }
     }
   } else {
     console.log("Skipping npm install (--no-install).");

@@ -49,7 +49,9 @@ await createHttpServer({
     useEventify('openapi/openapi.json'),
     usePermissify(),
     useAjv,
-    ${reactApps.map((appName) => `useWebApp("/${appName}", "${appName}")`).join(",\n    ")}
+    ${reactApps.length > 1 ? 
+        reactApps.map((appName) => `useWebApp("/${appName}", "${appName}")`).join(",\n    ") : 
+        reactApps.length === 1 ? `useWebApp("/", "${reactApps[0]}")` : ""}
   ],
   async buildContext(): Promise<RequestSessionCtx> {
     // TODO: derive this from the request (auth header, session, ...).
@@ -233,6 +235,41 @@ await eventifyOpenApi({
 });
 
 console.log("codegen done.");
+`;
+}
+
+export function genEsbuildScript(options: { minify: boolean; sourcemap: boolean }): string {
+  return `import { build, context } from "esbuild";
+import { sassPlugin } from "esbuild-sass-plugin";
+
+const appName = process.argv[2];
+const watch = process.argv.includes("--watch");
+
+if (!appName || !/^[A-Za-z0-9_-]+$/.test(appName)) {
+  throw new Error("Usage: node scripts/esbuild.js <app-name> [--watch]");
+}
+
+const buildOptions = {
+  absWorkingDir: process.cwd(),
+  entryPoints: [\`web/\${appName}/src/index.tsx\`],
+  outfile: \`web/\${appName}/static/app.js\`,
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  sourcemap: ${options.sourcemap},
+  minify: ${options.minify},
+  jsx: "automatic",
+  plugins: [sassPlugin()],
+};
+
+if (watch) {
+  const ctx = await context(buildOptions);
+  await ctx.watch();
+  console.log(\`Watching \${appName}...\`);
+} else {
+  await build(buildOptions);
+  console.log(\`Built \${appName}.\`);
+}
 `;
 }
 

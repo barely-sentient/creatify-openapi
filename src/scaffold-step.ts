@@ -5,6 +5,7 @@ import { genPackageJson } from "./templates-package.js";
 import {
   genCodegenScript,
   genContext,
+  genEsbuildScript,
   genGitignore,
   genHandlerExample,
   genJectShared,
@@ -64,7 +65,8 @@ export async function scaffoldStep(
   projectName: string,
   port: number,
   force: boolean,
-  reactApps: string[] = []
+  reactApps: string[] = [],
+  buildOptions = { minify: false, sourcemap: true }
 ): Promise<void> {
   const write = async (rel: string, content: string, opts?: { overwrite?: boolean }) => {
     const full = path.join(targetDir, rel);
@@ -77,7 +79,7 @@ export async function scaffoldStep(
   };
 
   console.log("Scaffolding server project ...");
-  await write("package.json", genPackageJson(projectName));
+  await write("package.json", genPackageJson(projectName, reactApps));
   await write("tsconfig.json", genTsconfig());
   await fs.mkdir(path.join(targetDir, "web", "shared"), { recursive: true });
 
@@ -132,6 +134,9 @@ export async function scaffoldStep(
   await write("src/setup/conf/schema.shared.ts", genSchemaShared());
   await write("src/setup/adapters/sqlite/index.ts", genSqliteAdapter());
   await write("scripts/codegen.ts", genCodegenScript());
+  if (reactApps.length > 0) {
+    await write("scripts/esbuild.js", genEsbuildScript(buildOptions));
+  }
   await write("AGENTS.md", genAgentGuide("AGENTS.md"));
   await write("CLAUDE.md", genAgentGuide("CLAUDE.md"));
 
