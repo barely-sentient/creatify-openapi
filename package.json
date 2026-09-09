@@ -1,0 +1,61 @@
+{
+  "name": "creatify-openapi",
+  "version": "1.0.0",
+  "description": "Generate a serveify-openapi server project from an openapi.json (json-ject) spec: migratify DB import, openapi-blocks prefabs, tsify types, eventify events, autocrudify + persistify + permissify wiring",
+  "keywords": [
+    "creatify",
+    "creatify-openapi",
+    "openapi",
+    "serveify",
+    "tsify",
+    "eventify",
+    "autocrudify",
+    "persistify",
+    "permissify",
+    "migratify",
+    "json-ject",
+    "scaffold",
+    "generator"
+  ],
+  "homepage": "https://github.com/barely-sentient/creatify-openapi#readme",
+  "bugs": {
+    "url": "https://github.com/barely-sentient/creatify-openapi/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/barely-sentient/creatify-openapi.git"
+  },
+  "license": "MIT",
+  "author": "Barely Sentient",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "creatify": "dist/index.js",
+    "creatify-openapi": "dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "json-ject": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
