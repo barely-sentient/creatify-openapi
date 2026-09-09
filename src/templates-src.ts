@@ -25,8 +25,8 @@ export function genTsconfig(): string {
   ) + "\n";
 }
 
-export function genSrcIndex(port: number): string {
-  return `import { createHttpServer, useCustomHandlers, useEventify, usePermissify, useTsify } from "serveify-openapi";
+export function genSrcIndex(port: number, reactApps: string[]): string {
+  return `import { createHttpServer, useCustomHandlers, useEventify, usePermissify, useTsify, useWebApp } from "serveify-openapi";
 import { useAutoCrud } from "autocrudify-openapi";
 import type { RequestSessionCtx } from "./context.js";
 import { useAjv } from "./plugins/use-ajv.js";
@@ -49,6 +49,7 @@ await createHttpServer({
     useEventify('openapi/openapi.json'),
     usePermissify(),
     useAjv,
+    ${reactApps.map((appName) => `useWebApp("/path/to/app", "./web/${appName}/static")`).join(",\n    ")}
   ],
   async buildContext(): Promise<RequestSessionCtx> {
     // TODO: derive this from the request (auth header, session, ...).

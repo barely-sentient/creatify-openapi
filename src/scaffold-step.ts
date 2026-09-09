@@ -81,11 +81,13 @@ export async function scaffoldStep(
   await write("tsconfig.json", genTsconfig());
   await fs.mkdir(path.join(targetDir, "web", "shared"), { recursive: true });
   for (const appName of reactApps) {
-    await write(`web/${appName}/index.tsx`, genReactApp(appName));
+    await fs.mkdir(`web/${appName}/src`)
+    await fs.mkdir(`web/${appName}/static`)
+    await write(`web/${appName}/src/index.tsx`, genReactApp(appName));
   }
   await write(".gitignore", genGitignore());
   await write("README.md", genProjectReadme(projectName, port));
-  await write("src/index.ts", genSrcIndex(port));
+  await write("src/index.ts", genSrcIndex(port, reactApps));
   await write("src/context.ts", genContext());
   await write("src/plugins/use-ajv.ts", genUseAjv());
   await write("src/setup/conf/ject.shared.ts", genJectShared());
