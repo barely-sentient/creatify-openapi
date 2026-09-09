@@ -84,6 +84,20 @@ export async function scaffoldStep(
     await fs.mkdir(`web/${appName}/src`, { recursive: true });
     await fs.mkdir(`web/${appName}/static`, { recursive: true });
     await write(`web/${appName}/src/index.tsx`, genReactApp(appName));
+    await write(`web/${appName}/static/index.html`, `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${appName}</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/${appName}/app.js"></script>
+    <link rel="stylesheet" href="/${appName}/app.css" />
+  </body>
+</html>`);
+    await write(`web/${appName}/static/app.css`, `/* ${appName} CSS */`);
   }
   await write(".gitignore", genGitignore());
   await write("README.md", genProjectReadme(projectName, port));

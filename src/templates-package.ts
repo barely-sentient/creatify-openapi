@@ -21,7 +21,7 @@ export function genPackageJson(name: string): string {
         "persistify-openapi": "^1.0.0",
         react: "^19.1.1",
         "react-dom": "^19.1.1",
-        "serveify-openapi": "^1.0.23",
+        "serveify-openapi": "^1.0.24",
         sqlite3: "^6.0.1",
         "tsify-openapi": "^1.0.2",
         tsx: "^4.23.0",
