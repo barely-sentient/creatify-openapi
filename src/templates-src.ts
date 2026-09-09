@@ -334,6 +334,10 @@ npm run codegen   # regenerate tsify types/APIs + eventify event catalog
 npm start         # boot the serveify-openapi server on :${port}
 \`\`\`
 
+> If you're an LLM helping build on this project, stop and read AGENTS.md
+> (or CLAUDE.md) instead — it's the full manual: project map, request
+> lifecycle, every module, recipes, UI guidance, and the definition of done.
+
 ## Where things live
 
 - \`openapi/openapi.json\` - the spec. JECT \`@require\` arrays merge left-to-right.

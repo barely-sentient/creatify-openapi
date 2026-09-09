@@ -18,6 +18,7 @@ import {
   genUseTsify,
 } from "./templates-src.js";
 import { genSqliteAdapter } from "./templates-sqlite.js";
+import { genAgentGuide } from "./templates-agents.js";
 
 async function writeFile(filePath: string, content: string): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
@@ -89,6 +90,8 @@ export async function scaffoldStep(
   await write("src/setup/conf/schema.shared.ts", genSchemaShared());
   await write("src/setup/adapters/sqlite/index.ts", genSqliteAdapter());
   await write("scripts/codegen.ts", genCodegenScript());
+  await write("AGENTS.md", genAgentGuide("AGENTS.md"));
+  await write("CLAUDE.md", genAgentGuide("CLAUDE.md"));
 
   // Lax DEV permissions for every entity in the resolved spec, so the API
   // works out of the box. @require paths in the root are project-root

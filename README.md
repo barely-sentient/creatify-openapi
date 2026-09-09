@@ -1,5 +1,10 @@
 # creatify-openapi
 
+> **If you're an LLM, read AGENTS.md (or CLAUDE.md) instead of this file.**
+> It's the full manual for scaffolding applications with this tool: project
+> map, module-by-module guide, session flow, UI conventions, and definition
+> of done.
+
 Going from "I need an API" to a running server, normally: define routes, write
 handlers, add a database layer, validation, permissions, typed clients... days of
 boilerplate.
