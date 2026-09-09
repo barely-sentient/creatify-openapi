@@ -24,7 +24,7 @@ export function genTsconfig(): string {
 }
 
 export function genSrcIndex(port: number): string {
-  return `import { createHttpServer, useCustomHandlers, useEventify, usePermissify } from "serveify-openapi";
+  return `import { createHttpServer, useCustomHandlers, useEventify, usePermissify, useTsify } from "serveify-openapi";
 import { useAutoCrud } from "autocrudify-openapi";
 import type { RequestSessionCtx } from "./context.js";
 import { useAjv } from "./plugins/use-ajv.js";
@@ -60,6 +60,7 @@ await createHttpServer({
 });
 `;
 }
+
 
 export function genContext(): string {
   return `import type { PermissionContext } from "permissify-openapi";
